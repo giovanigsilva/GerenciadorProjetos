@@ -1,10 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using ProjectManagement.Application.DTOs;
 using ProjectManagement.Domain.Interfaces.Services;
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 
 namespace ProjectManagement.Api.Controllers
 {
@@ -25,19 +21,27 @@ namespace ProjectManagement.Api.Controllers
         /// Lista todas as tarefas de um projeto.
         /// </summary>
         [HttpGet("projeto/{projetoId}")]
-        [ProducesResponseType(typeof(IEnumerable<CriarTarefaDto>), 200)]
+        [ProducesResponseType(typeof(object), 200)]
         public async Task<IActionResult> ListarPorProjeto(int projetoId)
         {
             try
             {
                 var tarefas = await _tarefaService.ObterTodasPorProjetoAsync(projetoId);
+
+                if (tarefas == null || !tarefas.Any())
+                {
+                    var msg = "Nenhuma tarefa encontrada para este projeto.";
+                    _logger.LogInformation(msg + " ProjetoId: {ProjetoId}", projetoId);
+                    return Ok(new { message = msg, tarefas = new List<CriarTarefaDto>() });
+                }
+
                 _logger.LogInformation("Tarefas listadas com sucesso para o projeto {ProjetoId}", projetoId);
-                return Ok(tarefas);
+                return Ok(new { message = MensagemApi.ListaSucesso.GetMensagem(), tarefas });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Erro ao listar tarefas do projeto {ProjetoId}", projetoId);
-                return StatusCode(500, new { message = "Erro interno ao processar a requisição." });
+                return StatusCode(500, new { message = MensagemApi.ErroInterno.GetMensagem() });
             }
         }
 
@@ -52,14 +56,14 @@ namespace ProjectManagement.Api.Controllers
             if (dto == null)
             {
                 _logger.LogWarning("Tentativa de criação de tarefa com dados nulos.");
-                return BadRequest(new { message = "Dados inválidos." });
+                return BadRequest(new { message = MensagemApi.DadosInvalidos.GetMensagem() });
             }
 
             try
             {
                 await _tarefaService.AdicionarTarefaAsync(dto, projetoId);
                 _logger.LogInformation("Tarefa criada com sucesso para o projeto {ProjetoId}", projetoId);
-                return StatusCode(201);
+                return StatusCode(201, new { message = MensagemApi.CriacaoSucesso.GetMensagem() });
             }
             catch (InvalidOperationException ex)
             {
@@ -74,7 +78,7 @@ namespace ProjectManagement.Api.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Erro inesperado ao criar tarefa. ProjetoID: {ProjetoId}", projetoId);
-                return StatusCode(500, new { message = "Erro interno ao processar a criação da tarefa." });
+                return StatusCode(500, new { message = MensagemApi.ErroInterno.GetMensagem() });
             }
         }
 
@@ -82,7 +86,7 @@ namespace ProjectManagement.Api.Controllers
         /// Atualiza uma tarefa existente.
         /// </summary>
         [HttpPut("{id}")]
-        [ProducesResponseType(204)]
+        [ProducesResponseType(typeof(object), 200)]
         [ProducesResponseType(400)]
         [ProducesResponseType(404)]
         public async Task<IActionResult> Atualizar(int id, [FromBody] AtualizarTarefaDto dto)
@@ -90,15 +94,15 @@ namespace ProjectManagement.Api.Controllers
             if (dto == null)
             {
                 _logger.LogWarning("Tentativa de atualização com DTO nulo. ID: {Id}", id);
-                return BadRequest(new { message = "Dados inválidos." });
+                return BadRequest(new { message = MensagemApi.DadosInvalidos.GetMensagem() });
             }
 
             try
             {
-                // usuárioId = 2 (fixo para fins de exemplo)
+                // usuárioId = 2 (fixo para exemplo)
                 await _tarefaService.AtualizarTarefaAsync(id, dto, 2);
                 _logger.LogInformation("Tarefa atualizada com sucesso. ID: {Id}", id);
-                return NoContent();
+                return Ok(new { message = MensagemApi.AtualizacaoSucesso.GetMensagem() });
             }
             catch (KeyNotFoundException ex)
             {
@@ -113,7 +117,7 @@ namespace ProjectManagement.Api.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Erro inesperado ao atualizar tarefa. ID: {Id}", id);
-                return StatusCode(500, new { message = "Erro interno ao atualizar a tarefa." });
+                return StatusCode(500, new { message = MensagemApi.ErroInterno.GetMensagem() });
             }
         }
 
@@ -121,7 +125,7 @@ namespace ProjectManagement.Api.Controllers
         /// Exclui uma tarefa pelo ID.
         /// </summary>
         [HttpDelete("{id}")]
-        [ProducesResponseType(204)]
+        [ProducesResponseType(typeof(object), 200)]
         [ProducesResponseType(404)]
         public async Task<IActionResult> Deletar(int id)
         {
@@ -129,7 +133,7 @@ namespace ProjectManagement.Api.Controllers
             {
                 await _tarefaService.RemoverTarefaAsync(id);
                 _logger.LogInformation("Tarefa removida com sucesso. ID: {Id}", id);
-                return NoContent();
+                return Ok(new { message = MensagemApi.RemocaoSucesso.GetMensagem() });
             }
             catch (KeyNotFoundException ex)
             {
@@ -139,7 +143,7 @@ namespace ProjectManagement.Api.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Erro inesperado ao excluir tarefa. ID: {Id}", id);
-                return StatusCode(500, new { message = "Erro interno ao remover a tarefa." });
+                return StatusCode(500, new { message = MensagemApi.ErroInterno.GetMensagem() });
             }
         }
     }

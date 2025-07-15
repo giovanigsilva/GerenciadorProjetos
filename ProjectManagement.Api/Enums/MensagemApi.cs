@@ -6,5 +6,10 @@
     ErroInterno,
     AcessoNaoAutorizado,
     ComentarioViaSpSucesso,
-    ComentarioDiretoSucesso
+    ComentarioDiretoSucesso,
+    CriacaoSucesso,
+    AtualizacaoSucesso,
+    RemocaoSucesso,
+    ListaSucesso,
+    RegistroNaoEncontrado
 }

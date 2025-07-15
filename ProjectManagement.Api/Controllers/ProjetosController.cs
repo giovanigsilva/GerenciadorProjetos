@@ -21,19 +21,34 @@ namespace ProjectManagement.Api.Controllers
         /// <summary>
         /// Lista todos os projetos de um usuário.
         /// </summary>
-        /// <param name="usuarioId">ID do usuário.</param>
         [HttpGet("{usuarioId}")]
-        [ProducesResponseType(typeof(IEnumerable<CriarProjetoDto>), 200)]
+        [ProducesResponseType(typeof(object), 200)]
         public async Task<IActionResult> ListarPorUsuario(int usuarioId)
         {
             try
             {
                 var projetos = await _projetoService.GetAllByUsuarioAsync(usuarioId);
-                return Ok(projetos);
+
+                if (projetos == null || !projetos.Any())
+                {
+                    _logger.LogInformation("Nenhum projeto encontrado para o usuário {UsuarioId}.", usuarioId);
+                    return Ok(new
+                    {
+                        message = "Nenhum projeto encontrado para este usuário.",
+                        projetos = Array.Empty<CriarProjetoDto>()
+                    });
+                }
+
+                _logger.LogInformation("Projetos listados com sucesso para o usuário {UsuarioId}.", usuarioId);
+                return Ok(new
+                {
+                    message = MensagemApi.ListaSucesso.GetMensagem(),
+                    projetos
+                });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erro ao listar projetos do usuário {UsuarioID}", usuarioId);
+                _logger.LogError(ex, "Erro ao listar projetos do usuário {UsuarioID}.", usuarioId);
                 return StatusCode(500, new { message = MensagemApi.ErroInterno.GetMensagem() });
             }
         }
@@ -41,9 +56,8 @@ namespace ProjectManagement.Api.Controllers
         /// <summary>
         /// Cria um novo projeto.
         /// </summary>
-        /// <param name="dto">Dados do projeto a ser criado.</param>
         [HttpPost]
-        [ProducesResponseType(typeof(CriarProjetoDto), 201)]
+        [ProducesResponseType(typeof(object), 201)]
         [ProducesResponseType(400)]
         public async Task<IActionResult> Criar([FromBody] CriarProjetoDto dto)
         {
@@ -56,9 +70,14 @@ namespace ProjectManagement.Api.Controllers
             try
             {
                 var projeto = await _projetoService.CriarProjetoAsync(dto);
-                _logger.LogInformation("Projeto criado com sucesso: {Projeto}", projeto.Nome);
+                _logger.LogInformation("Projeto criado com sucesso [Projeto: {Nome} - UsuarioID: {Id}].",
+                                       projeto.Nome, projeto.UsuarioID);
 
-                return CreatedAtAction(nameof(ListarPorUsuario), new { usuarioId = projeto.Id }, projeto);
+                return CreatedAtAction(nameof(ListarPorUsuario), new { usuarioId = projeto.UsuarioID }, new
+                {
+                    message = MensagemApi.CriacaoSucesso.GetMensagem(),
+                    projeto
+                });
             }
             catch (Exception ex) when (ex.Message == "Usuário não encontrado.")
             {
@@ -67,7 +86,7 @@ namespace ProjectManagement.Api.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erro ao criar projeto. DTO: {@Dto}", dto);
+                _logger.LogError(ex, "Erro inesperado ao criar projeto. DTO: {@Dto}", dto);
                 return StatusCode(500, new { message = MensagemApi.ErroInterno.GetMensagem() });
             }
         }
@@ -76,14 +95,14 @@ namespace ProjectManagement.Api.Controllers
         /// Atualiza um projeto existente.
         /// </summary>
         [HttpPut("{id}")]
-        [ProducesResponseType(204)]
+        [ProducesResponseType(typeof(object), 200)]
         [ProducesResponseType(400)]
         [ProducesResponseType(404)]
         public async Task<IActionResult> Atualizar(int id, [FromBody] AtualizarProjetoDto dto)
         {
             if (dto == null)
             {
-                _logger.LogWarning("Tentativa de atualização com DTO nulo.");
+                _logger.LogWarning("Tentativa de atualização com DTO nulo. ID: {Id}", id);
                 return BadRequest(new { message = MensagemApi.DadosInvalidos.GetMensagem() });
             }
 
@@ -92,7 +111,7 @@ namespace ProjectManagement.Api.Controllers
                 dto.Id = id;
                 await _projetoService.AtualizarProjetoAsync(dto);
                 _logger.LogInformation("Projeto atualizado com sucesso. ID: {Id}", id);
-                return NoContent();
+                return Ok(new { message = MensagemApi.AtualizacaoSucesso.GetMensagem() });
             }
             catch (Exception ex) when (ex.Message == "Projeto não encontrado.")
             {
@@ -110,7 +129,7 @@ namespace ProjectManagement.Api.Controllers
         /// Deleta um projeto pelo ID.
         /// </summary>
         [HttpDelete("{id}")]
-        [ProducesResponseType(204)]
+        [ProducesResponseType(typeof(object), 200)]
         [ProducesResponseType(404)]
         public async Task<IActionResult> Deletar(int id)
         {
@@ -118,7 +137,7 @@ namespace ProjectManagement.Api.Controllers
             {
                 await _projetoService.DeletarProjetoAsync(id);
                 _logger.LogInformation("Projeto deletado com sucesso. ID: {Id}", id);
-                return NoContent();
+                return Ok(new { message = MensagemApi.RemocaoSucesso.GetMensagem() });
             }
             catch (Exception ex) when (ex.Message == "Projeto não encontrado.")
             {
