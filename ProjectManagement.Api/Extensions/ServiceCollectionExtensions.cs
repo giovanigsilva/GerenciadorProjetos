@@ -17,6 +17,7 @@ namespace ProjectManagement.Api.Extensions
             services.AddScoped<IRelatorioService, RelatorioService>();
             services.AddScoped<ITarefaService, TarefaService>();
             services.AddScoped<IUsuarioService, UsuarioService>();
+            services.AddScoped<IComentarioService, ComentarioService>();
 
             return services;
         }
@@ -26,7 +27,9 @@ namespace ProjectManagement.Api.Extensions
             services.AddScoped<IProjetoRepository, ProjetoRepository>();
             services.AddScoped<ITarefaRepository, TarefaRepository>();
             services.AddScoped<IUsuarioRepository, UsuarioRepository>();
+            services.AddScoped<IComentarioRepository, ComentarioRepository>();
             services.AddScoped<IUnitOfWork, UnitOfWork>();
+            services.AddScoped<IHistoricoTarefaRepository, HistoricoTarefaRepository>();
 
             return services;
         }
