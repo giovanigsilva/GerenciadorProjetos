@@ -1,12 +1,17 @@
 ﻿using FluentValidation;
 using FluentValidation.AspNetCore;
-using Microsoft.Extensions.DependencyInjection;
 using ProjectManagement.Api.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Logging.AddCustomLogging();
-
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowLocalhost", policy =>
+        policy.WithOrigins("http://localhost:4200") 
+              .AllowAnyHeader()
+              .AllowAnyMethod());
+});
 builder.Services.AddRouting(static options =>
 {
     options.LowercaseUrls = true;
@@ -44,5 +49,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.UseCors("AllowLocalhost");
+app.MapGet("/health", () => Results.Ok(new { status = "Healthy" }));
 
 app.Run();

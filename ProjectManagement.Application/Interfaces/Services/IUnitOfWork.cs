@@ -6,5 +6,6 @@ public interface IUnitOfWork : IDisposable
     IProjetoRepository Projetos { get; }
     ITarefaRepository Tarefas { get; }
     IHistoricoTarefaRepository HistoricoTarefas { get; }
+    IComentarioRepository Comentarios { get; }  
     Task<int> SaveChangesAsync(CancellationToken ct = default);
 }

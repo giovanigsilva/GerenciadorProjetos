@@ -1,9 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.Data.SqlClient;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using ProjectManagement.Application.DTOs;
-using ProjectManagement.Domain.Entities;
-using ProjectManagement.Infrastructure.Data;
+using ProjectManagement.Application.Enums;
+using ProjectManagement.Domain.Interfaces.Services;
 using System;
 using System.Threading.Tasks;
 
@@ -13,68 +12,79 @@ namespace ProjectManagement.Api.Controllers
     [Route("api/[controller]")]
     public class ComentariosController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly IComentarioService _comentarioService;
+        private readonly ILogger<ComentariosController> _logger;
 
-        public ComentariosController(AppDbContext context)
+        public ComentariosController(
+            IComentarioService comentarioService,
+            ILogger<ComentariosController> logger)
         {
-            _context = context;
+            _comentarioService = comentarioService;
+            _logger = logger;
         }
 
         /// <summary>
         /// Adiciona um comentário via stored procedure.
         /// </summary>
-        /// <param name="dto">Dados do comentário a ser adicionado.</param>
-        /// <returns>Mensagem de sucesso ou erro.</returns>
-        /// <response code="200">Comentário adicionado com sucesso.</response>
-        /// <response code="500">Erro interno ao adicionar comentário.</response>
         [HttpPost("sp")]
-        [ProducesResponseType(typeof(object), 200)]
-        [ProducesResponseType(500)]
         public async Task<IActionResult> AdicionarComentarioViaStoredProcedure([FromBody] AdicionarComentarioDto dto)
         {
+            if (dto == null)
+            {
+                _logger.LogWarning(MensagemApi.DadosInvalidos.GetMensagem());
+                return BadRequest(new { message = MensagemApi.DadosInvalidos.GetMensagem() });
+            }
+
             try
             {
-                var parameters = new[]
-                {
-                    new SqlParameter("@UsuarioID", dto.UsuarioID),
-                    new SqlParameter("@TarefaID", dto.TarefaID),
-                    new SqlParameter("@Comentario", dto.Comentario ?? (object)DBNull.Value)
-                };
+                await _comentarioService.AdicionarComentarioViaStoredProcedureAsync(dto);
 
-                await _context.Database.ExecuteSqlRawAsync(
-                    "EXEC sp_AdicionarComentario @UsuarioID, @TarefaID, @Comentario",
-                    parameters);
+                _logger.LogInformation(
+                    "Comentário adicionado via SP por UsuarioID: {UsuarioID} na TarefaID: {TarefaID}.",
+                    dto.UsuarioID, dto.TarefaID);
 
-                return Ok(new { message = "Comentário adicionado com sucesso via stored procedure." });
+                return Ok(new { message = MensagemApi.ComentarioViaSpSucesso.GetMensagem() });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = $"Erro ao adicionar comentário: {ex.Message}" });
+                _logger.LogError(ex,
+                    "Erro ao adicionar comentário via SP (UsuarioID: {UsuarioID}, TarefaID: {TarefaID})",
+                    dto?.UsuarioID, dto?.TarefaID);
+
+                return StatusCode(500, new { message = MensagemApi.ErroInterno.GetMensagem() });
             }
         }
 
         /// <summary>
         /// Adiciona um comentário diretamente no banco.
         /// </summary>
-        /// <param name="dto">Dados do comentário a ser adicionado.</param>
-        /// <returns>Mensagem de sucesso.</returns>
-        /// <response code="200">Comentário adicionado com sucesso.</response>
         [HttpPost("db")]
-        [ProducesResponseType(typeof(object), 200)]
         public async Task<IActionResult> AdicionarComentarioDiretoNoBanco([FromBody] AdicionarComentarioDto dto)
         {
-            var historico = new HistoricoTarefa
+            if (dto == null)
             {
-                TarefaID = dto.TarefaID,
-                UsuarioID = dto.UsuarioID,
-                DescricaoAlteracao = $"Comentário adicionado: {dto.Comentario}",
-                DataAlteracao = DateTime.UtcNow
-            };
+                _logger.LogWarning(MensagemApi.DadosInvalidos.GetMensagem());
+                return BadRequest(new { message = MensagemApi.DadosInvalidos.GetMensagem() });
+            }
 
-            _context.HistoricoTarefas.Add(historico);
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _comentarioService.AdicionarComentarioDiretoAsync(dto);
 
-            return Ok(new { message = "Comentário adicionado diretamente no banco." });
+                _logger.LogInformation(
+                    "Comentário adicionado diretamente no banco por UsuarioID: {UsuarioID} na TarefaID: {TarefaID}.",
+                    dto.UsuarioID, dto.TarefaID);
+
+                return Ok(new { message = MensagemApi.ComentarioDiretoSucesso.GetMensagem() });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Erro ao adicionar comentário direto (UsuarioID: {UsuarioID}, TarefaID: {TarefaID})",
+                    dto?.UsuarioID, dto?.TarefaID);
+
+                return StatusCode(500, new { message = MensagemApi.ErroInterno.GetMensagem() });
+            }
         }
     }
 }

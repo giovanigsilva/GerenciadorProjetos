@@ -5,6 +5,8 @@ namespace ProjectManagement.Application.DTOs
 {
     public class UsuarioDto
     {
+        public int UsuarioID { get; set; }
+
         [Required(ErrorMessage = "O Id do usuário é obrigatório.")]
         [Range(1, int.MaxValue, ErrorMessage = "O Id deve ser um número positivo.")]
         public int Id { get; set; }
