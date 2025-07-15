@@ -21,21 +21,26 @@ namespace ProjectManagement.Api.Controllers
         /// Cria um novo usuário.
         /// </summary>
         [HttpPost]
-        [ProducesResponseType(typeof(CriarUsuarioDto), 201)]
+        [ProducesResponseType(typeof(object), 201)]
         [ProducesResponseType(400)]
         public async Task<IActionResult> Criar([FromBody] CriarUsuarioDto dto)
         {
             if (dto == null)
             {
                 _logger.LogWarning("Tentativa de criação de usuário com dados nulos.");
-                return BadRequest(new { message = "Dados inválidos." });
+                return BadRequest(new { message = MensagemApi.DadosInvalidos.GetMensagem() });
             }
 
             try
             {
                 var usuario = await _usuarioService.CriarUsuarioAsync(dto);
                 _logger.LogInformation("Usuário criado com sucesso. ID: {UsuarioID}", usuario.Id);
-                return CreatedAtAction(nameof(ObterPorId), new { id = usuario.Id }, usuario);
+
+                return CreatedAtAction(nameof(ObterPorId), new { id = usuario.Id }, new
+                {
+                    message = MensagemApi.CriacaoSucesso.GetMensagem(),
+                    usuario
+                });
             }
             catch (InvalidOperationException ex)
             {
@@ -45,7 +50,7 @@ namespace ProjectManagement.Api.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Erro interno ao criar usuário.");
-                return StatusCode(500, new { message = "Erro interno ao processar a requisição." });
+                return StatusCode(500, new { message = MensagemApi.ErroInterno.GetMensagem() });
             }
         }
 
@@ -53,7 +58,7 @@ namespace ProjectManagement.Api.Controllers
         /// Obtém um usuário pelo ID.
         /// </summary>
         [HttpGet("{id}")]
-        [ProducesResponseType(typeof(CriarUsuarioDto), 200)]
+        [ProducesResponseType(typeof(object), 200)]
         [ProducesResponseType(404)]
         public async Task<IActionResult> ObterPorId(int id)
         {
@@ -63,16 +68,16 @@ namespace ProjectManagement.Api.Controllers
                 if (usuario == null)
                 {
                     _logger.LogWarning("Usuário com ID {Id} não encontrado.", id);
-                    return NotFound(new { message = "Usuário não encontrado." });
+                    return NotFound(new { message = MensagemApi.RegistroNaoEncontrado.GetMensagem() });
                 }
 
                 _logger.LogInformation("Usuário encontrado. ID: {Id}", id);
-                return Ok(usuario);
+                return Ok(new { message = MensagemApi.ListaSucesso.GetMensagem(), usuario });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Erro ao buscar usuário por ID: {Id}", id);
-                return StatusCode(500, new { message = "Erro interno ao processar a requisição." });
+                return StatusCode(500, new { message = MensagemApi.ErroInterno.GetMensagem() });
             }
         }
 
@@ -80,7 +85,7 @@ namespace ProjectManagement.Api.Controllers
         /// Obtém um usuário pelo email.
         /// </summary>
         [HttpGet("email")]
-        [ProducesResponseType(typeof(CriarUsuarioDto), 200)]
+        [ProducesResponseType(typeof(object), 200)]
         [ProducesResponseType(404)]
         public async Task<IActionResult> ObterPorEmail([FromQuery] string email)
         {
@@ -90,16 +95,16 @@ namespace ProjectManagement.Api.Controllers
                 if (usuario == null)
                 {
                     _logger.LogWarning("Usuário com email '{Email}' não encontrado.", email);
-                    return NotFound(new { message = "Usuário não encontrado." });
+                    return NotFound(new { message = MensagemApi.RegistroNaoEncontrado.GetMensagem() });
                 }
 
                 _logger.LogInformation("Usuário encontrado por email: {Email}", email);
-                return Ok(usuario);
+                return Ok(new { message = MensagemApi.ListaSucesso.GetMensagem(), usuario });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Erro ao buscar usuário por email: {Email}", email);
-                return StatusCode(500, new { message = "Erro interno ao processar a requisição." });
+                return StatusCode(500, new { message = MensagemApi.ErroInterno.GetMensagem() });
             }
         }
 
@@ -107,7 +112,7 @@ namespace ProjectManagement.Api.Controllers
         /// Atualiza um usuário existente.
         /// </summary>
         [HttpPut("{id}")]
-        [ProducesResponseType(204)]
+        [ProducesResponseType(typeof(object), 200)]
         [ProducesResponseType(400)]
         [ProducesResponseType(404)]
         public async Task<IActionResult> Atualizar(int id, [FromBody] AtualizarUsuarioDto dto)
@@ -115,7 +120,7 @@ namespace ProjectManagement.Api.Controllers
             if (dto == null)
             {
                 _logger.LogWarning("Tentativa de atualização com DTO nulo. ID: {Id}", id);
-                return BadRequest(new { message = "Dados inválidos." });
+                return BadRequest(new { message = MensagemApi.DadosInvalidos.GetMensagem() });
             }
 
             try
@@ -123,7 +128,7 @@ namespace ProjectManagement.Api.Controllers
                 dto.Id = id;
                 await _usuarioService.AtualizarUsuarioAsync(dto);
                 _logger.LogInformation("Usuário atualizado com sucesso. ID: {Id}", id);
-                return NoContent();
+                return Ok(new { message = MensagemApi.AtualizacaoSucesso.GetMensagem() });
             }
             catch (KeyNotFoundException ex)
             {
@@ -133,7 +138,7 @@ namespace ProjectManagement.Api.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Erro ao atualizar usuário. ID: {Id}", id);
-                return StatusCode(500, new { message = "Erro interno ao atualizar o usuário." });
+                return StatusCode(500, new { message = MensagemApi.ErroInterno.GetMensagem() });
             }
         }
 
@@ -141,7 +146,7 @@ namespace ProjectManagement.Api.Controllers
         /// Deleta um usuário pelo ID.
         /// </summary>
         [HttpDelete("{id}")]
-        [ProducesResponseType(204)]
+        [ProducesResponseType(typeof(object), 200)]
         [ProducesResponseType(404)]
         public async Task<IActionResult> Deletar(int id)
         {
@@ -149,7 +154,7 @@ namespace ProjectManagement.Api.Controllers
             {
                 await _usuarioService.DeletarUsuarioAsync(id);
                 _logger.LogInformation("Usuário removido com sucesso. ID: {Id}", id);
-                return NoContent();
+                return Ok(new { message = MensagemApi.RemocaoSucesso.GetMensagem() });
             }
             catch (KeyNotFoundException ex)
             {
@@ -159,7 +164,7 @@ namespace ProjectManagement.Api.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Erro ao deletar usuário. ID: {Id}", id);
-                return StatusCode(500, new { message = "Erro interno ao remover o usuário." });
+                return StatusCode(500, new { message = MensagemApi.ErroInterno.GetMensagem() });
             }
         }
     }
